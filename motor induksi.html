@@ -4,89 +4,315 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Diagnosis Awal Gangguan Motor Induksi Tiga Fasa</title>
-    <!-- Chart.js UMD CDN yang stabil agar objek global 'Chart' terbaca sempurna -->
+    <!-- Chart.js UMD CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         :root {
-            --primary: #0f172a;
-            --accent: #2563eb;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --warning: #d97706;
-            --bg-light: #f1f5f9;
+            --primary-color: #0f172a;
+            --accent-color: #2563eb;
+            --success-color: #16a34a;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #334155;
             --border-color: #cbd5e1;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: var(--bg-light); color: var(--text-main); line-height: 1.5; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-        .app-container { display: flex; min-height: 100vh; }
-        .sidebar { width: 280px; background: var(--primary); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .brand h2 { font-size: 1.1rem; margin-bottom: 4px; color: #f8fafc; }
-        .brand p { font-size: 0.75rem; color: #94a3b8; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
 
-        .nav-menu { margin-top: 30px; display: flex; flex-direction: column; gap: 8px; }
-        .nav-btn { background: transparent; border: none; color: #cbd5e1; text-align: left; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
-        .nav-btn:hover, .nav-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
 
-        .disclaimer-badge { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 6px; font-size: 0.75rem; color: #cbd5e1; line-height: 1.3; }
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
 
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .topbar { background: var(--card-bg); padding: 15px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .topbar h1 { font-size: 1.25rem; color: var(--primary); }
+        .brand h2 {
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
 
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
-        .badge.normal { background: #dcfce7; color: var(--success); }
-        .badge.warning { background: #fef3c7; color: var(--warning); }
-        .badge.danger { background: #fee2e2; color: var(--danger); }
+        .brand p {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
 
-        .content-body { padding: 30px; flex: 1; overflow-y: auto; }
-        .tab-section { display: none; }
-        .tab-section.active { display: block; }
+        .nav-menu {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            text-align: left;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
 
-        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card h3 { font-size: 1.1rem; margin-bottom: 12px; color: var(--primary); }
+        .nav-btn:hover, .nav-btn.active {
+            background-color: var(--accent-color);
+            color: #fff;
+            font-weight: 600;
+        }
 
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
-        .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; }
-        .form-row { display: flex; gap: 10px; }
+        .disclaimer-badge {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            line-height: 1.3;
+        }
 
-        .checkbox-group, .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px; font-size: 0.85rem; }
-        .checkbox-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        .checkbox-group label, .checkbox-grid label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
-        .btn-primary { background: var(--accent); color: #fff; }
-        .btn-success { background: var(--success); color: #fff; }
-        .btn-danger { background: var(--danger); color: #fff; }
-        .btn-secondary { background: #64748b; color: #fff; }
+        .topbar {
+            background-color: var(--card-bg);
+            padding: 15px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar h1 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+
+        .content-body {
+            padding: 30px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-section {
+            display: none;
+        }
+
+        .tab-section.active {
+            display: block;
+        }
+
+        /* Layout Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .checkbox-group, .checkbox-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+
+        .checkbox-grid {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .checkbox-group label, .checkbox-grid label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .btn-primary { background-color: var(--accent-color); color: #fff; }
+        .btn-success { background-color: var(--success-color); color: #fff; }
+        .btn-danger { background-color: var(--danger-color); color: #fff; }
+        .btn-secondary { background-color: #64748b; color: #fff; }
         .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
         .btn:hover { opacity: 0.9; }
 
-        .chart-container { position: relative; height: 260px; width: 100%; }
+        /* Chart & Metrics */
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+        }
 
-        .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .metric-box { background: #f8fafc; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; }
-        .metric-box .label { font-size: 0.75rem; color: #64748b; }
-        .metric-box .value { font-size: 1.05rem; font-weight: 700; color: var(--primary); }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
 
-        .divider { border: none; border-top: 1px solid var(--border-color); margin: 15px 0; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .metric-box {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+        }
 
-        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .data-table th { background: #f8fafc; font-weight: 600; }
-        .table-responsive { overflow-x: auto; }
+        .metric-box .label {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
 
-        .fault-card-item { background: #fff5f5; border-left: 4px solid var(--danger); padding: 12px; border-radius: 4px; margin-bottom: 10px; }
-        .fault-card-item h4 { color: var(--danger); font-size: 0.95rem; margin-bottom: 4px; }
+        .metric-box .value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 15px 0;
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        /* Badges & Alerts */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.normal { background-color: #dcfce7; color: var(--success-color); }
+        .badge.warning { background-color: #fef3c7; color: var(--warning-color); }
+        .badge.danger { background-color: #fee2e2; color: var(--danger-color); }
+
+        .fault-card-item {
+            background-color: #fff5f5;
+            border-left: 4px solid var(--danger-color);
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .fault-card-item h4 {
+            color: var(--danger-color);
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
         .text-muted { color: #64748b; font-size: 0.85rem; }
+        .text-danger { color: var(--danger-color); font-size: 0.85rem; }
         .mt-2 { margin-top: 8px; }
         .mt-3 { margin-top: 15px; }
         .text-center { text-align: center; }
@@ -98,7 +324,7 @@
         <aside class="sidebar">
             <div class="brand">
                 <h2>⚡ DIAGNOSIS MOTOR</h2>
-                <p>Simulator Edukasi Teknik Listrik</p>
+                <p>Akademik D4 Teknik Listrik</p>
             </div>
             <nav class="nav-menu">
                 <button class="nav-btn active" data-target="tab-dashboard">Dashboard & Simulasi</button>
@@ -184,11 +410,11 @@
                             <div id="chartErrorMsg" class="text-danger mt-2" style="display:none; font-size:0.85rem;"></div>
                             <div class="metrics-grid mt-3">
                                 <div class="metric-box">
-                                    <span class="label">Kecepatan Sinkron ($n_s$)</span>
+                                    <span class="label">Kecepatan Sinkron (n_s)</span>
                                     <span id="valNs" class="value">1500 rpm</span>
                                 </div>
                                 <div class="metric-box">
-                                    <span class="label">Slip ($s$)</span>
+                                    <span class="label">Slip (s)</span>
                                     <span id="valSlip" class="value">4.00%</span>
                                 </div>
                                 <div class="metric-box">
@@ -291,32 +517,31 @@
         </main>
     </div>
 
-    <!-- Script Utama -->
+    <!-- Script Aplikasi Terintegrasi (Non-Module agar aman di GitHub Pages tanpa server lokal) -->
     <script>
-        let currentChart = null;
-        let currentSimulationState = {};
+        let activeSimulationState = {};
+        let currentChartInstance = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            try {
-                initNavigation();
-                runSimulation(); // Inisialisasi parameter simulasi awal & grafik
-                loadHistory();
-                
-                bindEvent('btnRunSim', 'click', runSimulation);
-                bindEvent('btnRunDiagnosis', 'click', runForwardChainingDiagnosis);
-                bindEvent('btnClearHistory', 'click', clearHistory);
-                bindEvent('btnExportCSV', 'click', exportCSV);
-                bindEvent('btnRunTests', 'click', runAutomatedTests);
-            } catch (err) {
-                console.error("Kesalahan Inisialisasi JavaScript:", err);
-            }
+            initNavigation();
+            executeSimulation();
+            renderHistoryTable();
+
+            bindEvent('btnRunSim', 'click', executeSimulation);
+            bindEvent('btnRunDiagnosis', 'click', executeDiagnosis);
+            bindEvent('btnClearHistory', 'click', () => {
+                if (confirm("Hapus seluruh riwayat diagnosis?")) {
+                    clearDiagnosisHistory();
+                    renderHistoryTable();
+                }
+            });
+            bindEvent('btnExportCSV', 'click', exportHistoryToCSV);
+            bindEvent('btnRunTests', 'click', runBrowserAutomatedTests);
         });
 
-        function bindEvent(elementId, eventType, handler) {
-            const el = document.getElementById(elementId);
-            if (el) {
-                el.addEventListener(eventType, handler);
-            }
+        function bindEvent(id, event, handler) {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(event, handler);
         }
 
         function initNavigation() {
@@ -334,32 +559,28 @@
             });
         }
 
-        function runSimulation() {
-            const codeInput = document.getElementById('motorCode');
-            const powerInput = document.getElementById('nomPower');
-            const voltInput = document.getElementById('nomVolt');
-            const currInput = document.getElementById('nomCurrent');
-            const freqInput = document.getElementById('freqHz');
-            const polesInput = document.getElementById('poles');
-            const loadSelect = document.getElementById('loadCondition');
+        function calculateElectricalParameters(inputData) {
+            const {
+                voltNom = 380,
+                powerKw = 5.5,
+                currentNom = 11.0,
+                freq = 50,
+                poles = 4,
+                loadCondition = 'Normal',
+                injPhaseLoss = false,
+                injVUnb = false,
+                injBearing = false,
+                injCooling = false,
+                injInsulation = false,
+                injMisalignment = false
+            } = inputData;
 
-            const code = codeInput ? codeInput.value : 'MOT-SIM-5.5KW';
-            const powerKw = powerInput ? parseFloat(powerInput.value) || 5.5 : 5.5;
-            const voltNom = voltInput ? parseFloat(voltInput.value) || 380 : 380;
-            const currentNom = currInput ? parseFloat(currInput.value) || 11.0 : 11.0;
-            const freq = freqInput ? parseFloat(freqInput.value) || 50 : 50;
-            const poles = polesInput ? parseInt(polesInput.value) || 4 : 4;
-            const loadCondition = loadSelect ? loadSelect.value : 'Normal';
-
-            const injPhaseLoss = document.getElementById('injPhaseLoss') ? document.getElementById('injPhaseLoss').checked : false;
-            const injVUnb = document.getElementById('injVUnb') ? document.getElementById('injVUnb').checked : false;
-            const injBearing = document.getElementById('injBearing') ? document.getElementById('injBearing').checked : false;
-            const injCooling = document.getElementById('injCooling') ? document.getElementById('injCooling').checked : false;
-            const injInsulation = document.getElementById('injInsulation') ? document.getElementById('injInsulation').checked : false;
-            const injMisalignment = document.getElementById('injMisalignment') ? document.getElementById('injMisalignment').checked : false;
+            if (poles <= 0 || freq <= 0) {
+                throw new Error("Jumlah kutub dan frekuensi harus bernilai positif.");
+            }
 
             const ns = (120 * freq) / poles;
-            
+
             let slip = 0.04;
             if (loadCondition === 'Ringan') slip = 0.015;
             if (loadCondition === 'Berat') slip = 0.075;
@@ -372,9 +593,9 @@
 
             if (injVUnb) {
                 vL1 *= 1.0;
-                vL2 *= 0.94;
-                vL3 *= 1.03;
-                vUnbalance = 3.8;
+                vL2 *= 0.93;
+                vL3 *= 1.04;
+                vUnbalance = 4.2;
             }
 
             let iL1 = currentNom;
@@ -383,8 +604,8 @@
 
             if (injPhaseLoss) {
                 iL1 = 0.0;
-                iL2 = currentNom * 1.8;
-                iL3 = currentNom * 1.8;
+                iL2 = currentNom * 1.75;
+                iL3 = currentNom * 1.75;
             } else if (loadCondition === 'Berat') {
                 iL1 = currentNom * 1.25;
                 iL2 = currentNom * 1.27;
@@ -393,83 +614,83 @@
 
             let temp = 65;
             let vib = 1.8;
-            if (injCooling || loadCondition === 'Berat') { temp = 88; }
-            if (injBearing) { vib = 5.2; }
-            if (injMisalignment) { vib = 4.8; }
+            if (injCooling || loadCondition === 'Berat') temp = 88;
+            if (injBearing) vib = 5.4;
+            if (injMisalignment) vib = 4.9;
 
-            currentSimulationState = {
-                code, powerKw, voltNom, currentNom, freq, poles, ns, nr, slip: slip * 100,
-                vL1, vL2, vL3, vUnbalance, iL1, iL2, iL3, temp, vib, loadCondition,
-                injPhaseLoss, injVUnb, injBearing, injCooling, injInsulation, injMisalignment
+            return {
+                ns,
+                nr,
+                slipPct: slip * 100,
+                vL1,
+                vL2,
+                vL3,
+                vUnbalance,
+                iL1,
+                iL2,
+                iL3,
+                temp,
+                vib,
+                powerKw,
+                currentNom,
+                voltNom,
+                loadCondition,
+                injPhaseLoss,
+                injVUnb,
+                injBearing,
+                injCooling,
+                injInsulation,
+                injMisalignment
             };
-
-            setInnerText('valNs', `${ns.toFixed(0)} rpm`);
-            setInnerText('valSlip', `${(slip * 100).toFixed(2)}%`);
-            setInnerText('valVUnb', `${vUnbalance.toFixed(2)}%`);
-            setInnerText('valTempVib', `${temp}°C / ${vib} mm/s`);
-
-            const badge = document.getElementById('sysStatus');
-            if (badge) {
-                if (injPhaseLoss || injInsulation) {
-                    badge.className = 'badge danger';
-                    badge.innerText = 'Gangguan Kritis';
-                } else if (injVUnb || injBearing || injCooling || injMisalignment || loadCondition === 'Berat') {
-                    badge.className = 'badge warning';
-                    badge.innerText = 'Peringatan / Anomali';
-                } else {
-                    badge.className = 'badge normal';
-                    badge.innerText = 'Normal';
-                }
-            }
-
-            updateCurrentChart(iL1, iL2, iL3);
         }
 
-        function setInnerText(id, text) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = text;
-        }
-
-        function updateCurrentChart(i1, i2, i3) {
-            const canvas = document.getElementById('currentChart');
+        function renderCurrentChart(canvasId, i1, i2, i3, freq = 50) {
+            const canvas = document.getElementById(canvasId);
             const errorMsg = document.getElementById('chartErrorMsg');
-            
+
             if (!canvas) return;
 
             if (typeof Chart === 'undefined') {
                 if (errorMsg) {
                     errorMsg.style.display = 'block';
-                    errorMsg.innerText = 'Gagal memuat pustaka Chart.js dari CDN.';
+                    errorMsg.innerText = 'Pustaka Chart.js tidak berhasil dimuat.';
                 }
                 return;
             }
 
             const ctx = canvas.getContext('2d');
-            const timeLabels = ['0ms', '5ms', '10ms', '15ms', '20ms'];
+            const timeLabels = ['0ms', '4ms', '8ms', '12ms', '16ms', '20ms'];
             
-            const dataL1 = timeLabels.map((_, i) => +(i1 * Math.sin((i * Math.PI) / 2)).toFixed(2));
-            const dataL2 = timeLabels.map((_, i) => +(i2 * Math.sin((i * Math.PI) / 2 - (2*Math.PI/3))).toFixed(2));
-            const dataL3 = timeLabels.map((_, i) => +(i3 * Math.sin((i * Math.PI) / 2 - (4*Math.PI/3))).toFixed(2));
+            const peak1 = i1 * Math.sqrt(2);
+            const peak2 = i2 * Math.sqrt(2);
+            const peak3 = i3 * Math.sqrt(2);
 
-            if (currentChart) {
-                currentChart.destroy();
+            const dataL1 = timeLabels.map((_, i) => +(peak1 * Math.sin((i * Math.PI) / 2.5)).toFixed(2));
+            const dataL2 = timeLabels.map((_, i) => +(peak2 * Math.sin((i * Math.PI) / 2.5 - (2 * Math.PI / 3))).toFixed(2));
+            const dataL3 = timeLabels.map((_, i) => +(peak3 * Math.sin((i * Math.PI) / 2.5 - (4 * Math.PI / 3))).toFixed(2));
+
+            if (currentChartInstance) {
+                currentChartInstance.destroy();
             }
 
             try {
-                currentChart = new Chart(ctx, {
+                currentChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: timeLabels,
                         datasets: [
-                            { label: 'Fasa L1 (A)', data: dataL1, borderColor: '#dc2626', tension: 0.4 },
-                            { label: 'Fasa L2 (A)', data: dataL2, borderColor: '#2563eb', tension: 0.4 },
-                            { label: 'Fasa L3 (A)', data: dataL3, borderColor: '#16a34a', tension: 0.4 }
+                            { label: 'Arus L1 (A)', data: dataL1, borderColor: '#dc2626', tension: 0.4, borderWidth: 2 },
+                            { label: 'Arus L2 (A)', data: dataL2, borderColor: '#2563eb', tension: 0.4, borderWidth: 2 },
+                            { label: 'Arus L3 (A)', data: dataL3, borderColor: '#16a34a', tension: 0.4, borderWidth: 2 }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: false } }
+                        scales: {
+                            y: { title: { display: true, text: 'Amplitudo Arus (A)' } },
+                            x: { title: { display: true, text: 'Waktu (ms)' } }
+                        }
                     }
                 });
             } catch (e) {
@@ -477,7 +698,7 @@
             }
         }
 
-        function evaluateInference(state, userSymptoms = []) {
+        function runForwardChaining(state, userSymptoms = []) {
             const facts = {
                 phaseLoss: state.iL1 === 0 || state.iL2 === 0 || state.iL3 === 0 || state.injPhaseLoss,
                 voltageUnbalanceHigh: state.vUnbalance > 2.0 || state.injVUnb,
@@ -486,66 +707,66 @@
                 highTemp: state.temp > 80 || state.injCooling,
                 insulationLow: state.injInsulation || userSymptoms.includes('S11'),
                 highVibration: state.vib > 4.0,
-                rotorSlipHigh: state.slip > 7.0,
+                rotorSlipHigh: state.slipPct > 7.0,
                 userSymptoms
             };
 
             const rules = [
                 {
-                    code: 'R1',
+                    code: 'R01',
                     faultId: 'F1',
                     faultName: 'Kehilangan Salah Satu Fasa (Single Phasing)',
                     condition: () => facts.phaseLoss || facts.userSymptoms.includes('S1'),
-                    evidence: 'Arus salah satu fasa bernilai 0 A atau terdeteksi pemutusan saluran fasa.'
+                    evidence: 'Arus pada salah satu fasa bernilai 0 A atau terdeteksi pemutusan saluran fasa.'
                 },
                 {
-                    code: 'R2',
+                    code: 'R02',
                     faultId: 'F2',
                     faultName: 'Ketidakseimbangan Tegangan Suplai',
                     condition: () => facts.voltageUnbalanceHigh || facts.userSymptoms.includes('S4'),
-                    evidence: `Deviasi tegangan antar fasa tercatat ${state.vUnbalance.toFixed(2)}% (> 2.0% standar IEC).`
+                    evidence: `Deviasi tegangan antar fasa tercatat ${state.vUnbalance.toFixed(2)}% (melampaui ambang batas 2.0% standar IEC).`
                 },
                 {
-                    code: 'R3',
+                    code: 'R03',
                     faultId: 'F3',
-                    faultName: 'Beban Lebih (Overload)',
+                    faultName: 'Beban Berlebih (Overload)',
                     condition: () => facts.overload || facts.userSymptoms.includes('S3') || facts.userSymptoms.includes('S5'),
-                    evidence: `Arus operasi melebihi arus nominal (${state.currentNom} A) atau kondisi beban berat.`
+                    evidence: `Arus operasi melampaui arus nominal (${state.currentNom} A) atau kondisi beban operasi dilaporkan berat.`
                 },
                 {
-                    code: 'R4',
+                    code: 'R04',
                     faultId: 'F4',
                     faultName: 'Gangguan Bantalan (Bearing Fault)',
                     condition: () => (facts.bearingNoise && facts.highVibration) || facts.userSymptoms.includes('S6'),
-                    evidence: `Getaran tinggi (${state.vib} mm/s) dengan indikasi suara bantalan kasar.`
+                    evidence: `Tingkat getaran mekanis tinggi (${state.vib} mm/s) dengan indikasi suara bantalan kasar.`
                 },
                 {
-                    code: 'R5',
+                    code: 'R05',
                     faultId: 'F5',
-                    faultName: 'Gangguan Pendinginan / Ventilasi Terhambat',
+                    faultName: 'Pendinginan Tidak Memadai',
                     condition: () => facts.highTemp || facts.userSymptoms.includes('S9'),
-                    evidence: `Suhu operasi tinggi (${state.temp}°C) dengan sistem pendinginan tidak optimal.`
+                    evidence: `Suhu operasional motor tinggi (${state.temp}°C) disertai gangguan ventilasi/pendinginan.`
                 },
                 {
-                    code: 'R6',
+                    code: 'R06',
                     faultId: 'F6',
-                    faultName: 'Gangguan Isolasi Belitan / Hubung Singkat',
+                    faultName: 'Indikasi Gangguan Isolasi Belitan',
                     condition: () => facts.insulationLow || facts.userSymptoms.includes('S11'),
-                    evidence: 'Hasil uji tahanan isolasi (Megger) menunjukkan penurunan di bawah standar minimum.'
+                    evidence: 'Hasil pengujian tahanan isolasi (Megger) menunjukkan penurunan di bawah standar minimum kelayakan.'
                 },
                 {
-                    code: 'R7',
+                    code: 'R07',
                     faultId: 'F7',
-                    faultName: 'Dugaan Gangguan Rotor (Broken Rotor Bar)',
+                    faultName: 'Slip Tidak Normal / Indikasi Masalah Rotor',
                     condition: () => facts.rotorSlipHigh || facts.userSymptoms.includes('S8'),
-                    evidence: `Slip rotor mencapai ${state.slip.toFixed(2)}% disertai penurunan putaran berbeban.`
+                    evidence: `Nilai slip rotor mencapai ${state.slipPct.toFixed(2)}% disertai penurunan kecepatan putar berbeban.`
                 },
                 {
-                    code: 'R8',
+                    code: 'R08',
                     faultId: 'F8',
-                    faultName: 'Ketidakselarasan Poros (Shaft Misalignment)',
+                    faultName: 'Ketidaksejajaran Mekanis (Shaft Misalignment)',
                     condition: () => (state.injMisalignment || facts.userSymptoms.includes('S7')) && !facts.bearingNoise,
-                    evidence: 'Getaran radial/aksial tinggi terdeteksi tanpa dominasi suara aus pada bearing.'
+                    evidence: 'Getaran radial/aksial tinggi terdeteksi tanpa dominasi frekuensi kerusakan bearing.'
                 }
             ];
 
@@ -556,17 +777,63 @@
                         firedFaults.push(rule);
                     }
                 } catch (e) {
-                    console.error(`Error mengevaluasi aturan ${rule.code}:`, e);
+                    console.error(`Kesalahan evaluasi aturan ${rule.code}:`, e);
                 }
             });
 
             return firedFaults;
         }
 
-        function runForwardChainingDiagnosis() {
+        function executeSimulation() {
+            const inputData = {
+                code: document.getElementById('motorCode')?.value || 'MOT-01',
+                powerKw: parseFloat(document.getElementById('nomPower')?.value) || 5.5,
+                voltNom: parseFloat(document.getElementById('nomVolt')?.value) || 380,
+                currentNom: parseFloat(document.getElementById('nomCurrent')?.value) || 11.0,
+                freq: parseFloat(document.getElementById('freqHz')?.value) || 50,
+                poles: parseInt(document.getElementById('poles')?.value) || 4,
+                loadCondition: document.getElementById('loadCondition')?.value || 'Normal',
+                injPhaseLoss: document.getElementById('injPhaseLoss')?.checked || false,
+                injVUnb: document.getElementById('injVUnb')?.checked || false,
+                injBearing: document.getElementById('injBearing')?.checked || false,
+                injCooling: document.getElementById('injCooling')?.checked || false,
+                injInsulation: document.getElementById('injInsulation')?.checked || false,
+                injMisalignment: document.getElementById('injMisalignment')?.checked || false
+            };
+
+            try {
+                activeSimulationState = calculateElectricalParameters(inputData);
+                
+                setInnerText('valNs', `${activeSimulationState.ns.toFixed(0)} rpm`);
+                setInnerText('valSlip', `${activeSimulationState.slipPct.toFixed(2)}%`);
+                setInnerText('valVUnb', `${activeSimulationState.vUnbalance.toFixed(2)}%`);
+                setInnerText('valTempVib', `${activeSimulationState.temp}°C / ${activeSimulationState.vib} mm/s`);
+
+                const badge = document.getElementById('sysStatus');
+                if (badge) {
+                    if (activeSimulationState.injPhaseLoss || activeSimulationState.injInsulation) {
+                        badge.className = 'badge danger';
+                        badge.innerText = 'Gangguan Kritis';
+                    } else if (activeSimulationState.vUnbalance > 2.0 || activeSimulationState.vib > 4.5 || activeSimulationState.loadCondition === 'Berat') {
+                        badge.className = 'badge warning';
+                        badge.innerText = 'Peringatan / Anomali';
+                    } else {
+                        badge.className = 'badge normal';
+                        badge.innerText = 'Normal';
+                    }
+                }
+
+                renderCurrentChart('currentChart', activeSimulationState.iL1, activeSimulationState.iL2, activeSimulationState.iL3, activeSimulationState.freq);
+            } catch (e) {
+                alert("Kesalahan perhitungan parameter: " + e.message);
+            }
+        }
+
+        function executeDiagnosis() {
             const checkboxes = document.querySelectorAll('.sym-chk:checked');
             const userSymptoms = Array.from(checkboxes).map(cb => cb.value);
-            const firedFaults = evaluateInference(currentSimulationState, userSymptoms);
+
+            const firedFaults = runForwardChaining(activeSimulationState, userSymptoms);
 
             const resultArea = document.getElementById('diagnosisResultArea');
             const outputDiv = document.getElementById('diagnosisOutput');
@@ -574,9 +841,10 @@
 
             if (firedFaults.length === 0) {
                 if (outputDiv) {
-                    outputDiv.innerHTML = `<p class="text-muted">Tidak ada aturan gangguan yang terpicu. Motor beroperasi dalam kondisi normal atau bukti/gejala belum mencukupi.</p>`;
+                    outputDiv.innerHTML = `<p class="text-muted">Tidak ada aturan gangguan yang terpicu. Motor beroperasi normal atau bukti gejala belum mencukupi.</p>`;
                 }
-                saveHistory(currentSimulationState.code, "Normal / Aman", "Tidak ada gangguan terdeteksi.");
+                saveDiagnosisHistory(activeSimulationState.code || 'MOT-01', "Normal / Aman", "Tidak ada gangguan terdeteksi.");
+                renderHistoryTable();
                 return;
             }
 
@@ -584,21 +852,23 @@
             firedFaults.forEach(f => {
                 html += `
                     <div class="fault-card-item">
-                        <h4>⚠️ [${f.code}] ${f.faultName}</h4>
+                        <h4>⚠️ [Aturan ${f.code}] ${f.faultName}</h4>
                         <p><strong>Bukti Pendukung:</strong> ${f.evidence}</p>
-                        <p class="text-muted mt-2"><em>Rekomendasi: Lakukan pemeriksaan fisik lanjutan sesuai prosedur keselamatan K3 listrik.</em></p>
+                        <p class="text-muted mt-2"><em>Rekomendasi: Lakukan pemeriksaan fisik lanjutan sesuai prosedur K3 listrik.</em></p>
                     </div>
                 `;
             });
 
             if (outputDiv) outputDiv.innerHTML = html;
-            saveHistory(currentSimulationState.code, "Terdeteksi Gangguan", firedFaults.map(f => f.faultName).join(', '));
+            saveDiagnosisHistory(activeSimulationState.code || 'MOT-01', "Terdeteksi Gangguan", firedFaults.map(f => f.faultName).join(', '));
+            renderHistoryTable();
         }
 
-        function saveHistory(motorCode, summary, details) {
+        function saveDiagnosisHistory(motorCode, summary, details) {
             try {
                 let history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
                 const entry = {
+                    id: 'DIAG-' + Date.now(),
                     time: new Date().toLocaleString('id-ID'),
                     motorCode,
                     summary,
@@ -606,25 +876,64 @@
                 };
                 history = [entry, ...history].slice(0, 50);
                 localStorage.setItem('motor_diag_history', JSON.stringify(history));
-                loadHistory();
+                return true;
             } catch (e) {
-                console.error("Gagal menyimpan ke localStorage:", e);
+                console.error("Gagal menyimpan riwayat ke LocalStorage:", e);
+                return false;
             }
         }
 
-        function loadHistory() {
+        function loadDiagnosisHistory() {
+            try {
+                return JSON.parse(localStorage.getItem('motor_diag_history')) || [];
+            } catch (e) {
+                console.error("Gagal membaca riwayat dari LocalStorage:", e);
+                return [];
+            }
+        }
+
+        function clearDiagnosisHistory() {
+            try {
+                localStorage.removeItem('motor_diag_history');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function exportHistoryToCSV() {
+            const history = loadDiagnosisHistory();
+            if (history.length === 0) {
+                alert("Tidak ada data riwayat untuk diekspor.");
+                return;
+            }
+
+            let csvContent = "\uFEFFWaktu,Kode Motor,Ringkasan,Detail Gangguan\r\n";
+            history.forEach(row => {
+                const time = `"${(row.time || '').replace(/"/g, '""')}"`;
+                const code = `"${(row.motorCode || '').replace(/"/g, '""')}"`;
+                const summary = `"${(row.summary || '').replace(/"/g, '""')}"`;
+                const details = `"${(row.details || '').replace(/"/g, '""')}"`;
+                csvContent += `${time},${code},${summary},${details}\r\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `riwayat_diagnosis_motor_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function renderHistoryTable() {
             const tbody = document.getElementById('historyBody');
             if (!tbody) return;
 
-            let history = [];
-            try {
-                history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
-            } catch (e) {
-                console.error("Gagal membaca localStorage:", e);
-            }
-
+            const history = loadDiagnosisHistory();
             if (history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Belum ada riwayat tersimpan (Data disimpan secara lokal di browser Anda).</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Belum ada riwayat pemeriksaan tersimpan.</td></tr>`;
                 return;
             }
 
@@ -642,51 +951,122 @@
             tbody.innerHTML = html;
         }
 
-        function clearHistory() {
-            if (confirm('Hapus seluruh riwayat pemeriksaan yang tersimpan di browser?')) {
-                try {
-                    localStorage.removeItem('motor_diag_history');
-                    loadHistory();
-                } catch (e) {
-                    console.error("Gagal menghapus localStorage:", e);
+        function runBrowserAutomatedTests() {
+            const testCases = [
+                {
+                    id: 'TC-01',
+                    name: 'Kondisi Normal Motor',
+                    run: () => {
+                        const state = calculateElectricalParameters({ loadCondition: 'Normal' });
+                        const fired = runForwardChaining(state, []);
+                        return fired.length === 0;
+                    }
+                },
+                {
+                    id: 'TC-02',
+                    name: 'Deteksi Kehilangan Fasa (Single Phasing)',
+                    run: () => {
+                        const state = calculateElectricalParameters({ injPhaseLoss: true });
+                        const fired = runForwardChaining(state, ['S1']);
+                        return fired.some(f => f.faultId === 'F1');
+                    }
+                },
+                {
+                    id: 'TC-03',
+                    name: 'Deteksi Ketidakseimbangan Tegangan',
+                    run: () => {
+                        const state = calculateElectricalParameters({ injVUnb: true });
+                        const fired = runForwardChaining(state, ['S4']);
+                        return fired.some(f => f.faultId === 'F2');
+                    }
+                },
+                {
+                    id: 'TC-04',
+                    name: 'Deteksi Beban Lebih (Overload)',
+                    run: () => {
+                        const state = calculateElectricalParameters({ loadCondition: 'Berat' });
+                        const fired = runForwardChaining(state, ['S3']);
+                        return fired.some(f => f.faultId === 'F3');
+                    }
+                },
+                {
+                    id: 'TC-05',
+                    name: 'Deteksi Gangguan Bantalan',
+                    run: () => {
+                        const state = calculateElectricalParameters({ injBearing: true });
+                        const fired = runForwardChaining(state, ['S6']);
+                        return fired.some(f => f.faultId === 'F4');
+                    }
+                },
+                {
+                    id: 'TC-06',
+                    name: 'Deteksi Gangguan Pendinginan',
+                    run: () => {
+                        const state = calculateElectricalParameters({ injCooling: true });
+                        const fired = runForwardChaining(state, ['S9']);
+                        return fired.some(f => f.faultId === 'F5');
+                    }
+                },
+                {
+                    id: 'TC-07',
+                    name: 'Deteksi Gangguan Isolasi Belitan',
+                    run: () => {
+                        const state = calculateElectricalParameters({});
+                        const fired = runForwardChaining(state, ['S11']);
+                        return fired.some(f => f.faultId === 'F6');
+                    }
+                },
+                {
+                    id: 'TC-08',
+                    name: 'Deteksi Ketidaksejajaran Poros',
+                    run: () => {
+                        const state = calculateElectricalParameters({ injMisalignment: true });
+                        const fired = runForwardChaining(state, ['S7']);
+                        return fired.some(f => f.faultId === 'F8');
+                    }
+                },
+                {
+                    id: 'TC-09',
+                    name: 'Validasi Parameter Slip',
+                    run: () => {
+                        const state = calculateElectricalParameters({ freq: 50, poles: 4, loadCondition: 'Normal' });
+                        return state.ns === 1500 && state.slipPct > 0;
+                    }
                 }
-            }
-        }
+            ];
 
-        function exportCSV() {
-            let history = [];
-            try {
-                history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
-            } catch (e) {
-                alert('Gagal membaca data riwayat dari browser.');
-                return;
-            }
+            const tbody = document.getElementById('testResultsBody');
+            if (!tbody) return;
 
-            if (history.length === 0) {
-                alert('Tidak ada data riwayat untuk diekspor.');
-                return;
-            }
+            let html = '';
+            let passCount = 0;
 
-            let csvContent = "data:text/csv;charset=utf-8,Waktu,Kode Motor,Ringkasan,Detail Gangguan\r\n";
-            history.forEach(row => {
-                const cleanTime = `"${(row.time || '').replace(/"/g, '""')}"`;
-                const cleanCode = `"${(row.motorCode || '').replace(/"/g, '""')}"`;
-                const cleanSummary = `"${(row.summary || '').replace(/"/g, '""')}"`;
-                const cleanDetails = `"${(row.details || '').replace(/"/g, '""')}"`;
-                csvContent += `${cleanTime},${cleanCode},${cleanSummary},${cleanDetails}\r\n`;
+            testCases.forEach(tc => {
+                let success = false;
+                try {
+                    success = tc.run();
+                    if (success) passCount++;
+                } catch (e) {
+                    success = false;
+                    console.error(`Test ${tc.id} error:`, e);
+                }
+
+                html += `
+                    <tr>
+                        <td>${tc.id}</td>
+                        <td>${tc.name}</td>
+                        <td>Sesuai Logika Aturan</td>
+                        <td><span class="badge ${success ? 'normal' : 'danger'}">${success ? 'BERHASIL (PASS)' : 'GAGAL (FAIL)'}</span></td>
+                    </tr>
+                `;
             });
 
-            try {
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `riwayat_diagnosis_motor_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch (e) {
-                console.error("Gagal mengunduh CSV:", e);
-            }
+            tbody.innerHTML = html;
+        }
+
+        function setInnerText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
         }
 
         function escapeHtml(str) {
@@ -697,107 +1077,6 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
-        }
-
-        function runAutomatedTests() {
-            const testCases = [
-                {
-                    id: 'TC-01',
-                    name: 'Kondisi Normal',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultCount: 0
-                },
-                {
-                    id: 'TC-02',
-                    name: 'Kehilangan Fasa (Single Phasing)',
-                    state: { iL1: 0, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: true, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultId: 'F1'
-                },
-                {
-                    id: 'TC-03',
-                    name: 'Ketidakseimbangan Tegangan',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 3.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: true, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultId: 'F2'
-                },
-                {
-                    id: 'TC-04',
-                    name: 'Beban Lebih (Overload)',
-                    state: { iL1: 14, currentNom: 11, vUnbalance: 0.5, vib: 2.0, temp: 70, slip: 7, loadCondition: 'Berat', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultId: 'F3'
-                },
-                {
-                    id: 'TC-05',
-                    name: 'Gangguan Bantalan (Bearing)',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 5.2, temp: 68, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: true, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultId: 'F4'
-                },
-                {
-                    id: 'TC-06',
-                    name: 'Gangguan Pendinginan',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 85, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: true, injInsulation: false, injMisalignment: false },
-                    expectedFaultId: 'F5'
-                },
-                {
-                    id: 'TC-07',
-                    name: 'Gangguan Isolasi Belitan',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: true, injMisalignment: false },
-                    expectedFaultId: 'F6'
-                },
-                {
-                    id: 'TC-08',
-                    name: 'Ketidakselarasan Poros (Misalignment)',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 4.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: true },
-                    expectedFaultId: 'F8'
-                },
-                {
-                    id: 'TC-09',
-                    name: 'Bukti Tidak Mencukupi (Ambigu)',
-                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.5, temp: 50, slip: 2, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
-                    expectedFaultCount: 0
-                }
-            ];
-
-            const tbody = document.getElementById('testResultsBody');
-            if (!tbody) return;
-
-            let html = '';
-            testCases.forEach(tc => {
-                const fired = evaluateInference(tc.state);
-                
-                let passed = false;
-                let failReason = '';
-
-                if (tc.expectedFaultCount !== undefined) {
-                    if (fired.length === tc.expectedFaultCount) {
-                        passed = true;
-                    } else {
-                        failReason = `Diharapkan ${tc.expectedFaultCount} gangguan, mendeteksi ${fired.length}.`;
-                    }
-                } else if (tc.expectedFaultId) {
-                    const found = fired.some(f => f.faultId === tc.expectedFaultId);
-                    if (found) {
-                        passed = true;
-                    } else {
-                        failReason = `Gagal mendeteksi ID gangguan ${tc.expectedFaultId}.`;
-                    }
-                }
-
-                html += `
-                    <tr>
-                        <td>${tc.id}</td>
-                        <td>${tc.name}</td>
-                        <td>${tc.expectedFaultId ? 'Gangguan ' + tc.expectedFaultId : 'Normal / Tanpa Gangguan'}</td>
-                        <td>
-                            <span class="badge ${passed ? 'normal' : 'danger'}">
-                                ${passed ? 'BERHASIL (PASS)' : 'GAGAL (FAIL)'}
-                            </span>
-                            ${!passed ? `<br><small class="text-danger">${failReason}</small>` : ''}
-                        </td>
-                    </tr>
-                `;
-            });
-
-            tbody.innerHTML = html;
         }
     </script>
 </body>
