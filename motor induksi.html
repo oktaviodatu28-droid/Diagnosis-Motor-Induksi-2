@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Diagnosis Awal Gangguan Motor Induksi Tiga Fasa</title>
+    <!-- Chart.js UMD CDN yang stabil agar objek global 'Chart' terbaca sempurna -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --bg-light: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --border-color: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: var(--bg-light); color: var(--text-main); line-height: 1.5; }
+
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: var(--primary); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .brand h2 { font-size: 1.1rem; margin-bottom: 4px; color: #f8fafc; }
+        .brand p { font-size: 0.75rem; color: #94a3b8; }
+
+        .nav-menu { margin-top: 30px; display: flex; flex-direction: column; gap: 8px; }
+        .nav-btn { background: transparent; border: none; color: #cbd5e1; text-align: left; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        .nav-btn:hover, .nav-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+
+        .disclaimer-badge { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 6px; font-size: 0.75rem; color: #cbd5e1; line-height: 1.3; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .topbar { background: var(--card-bg); padding: 15px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .topbar h1 { font-size: 1.25rem; color: var(--primary); }
+
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .badge.normal { background: #dcfce7; color: var(--success); }
+        .badge.warning { background: #fef3c7; color: var(--warning); }
+        .badge.danger { background: #fee2e2; color: var(--danger); }
+
+        .content-body { padding: 30px; flex: 1; overflow-y: auto; }
+        .tab-section { display: none; }
+        .tab-section.active { display: block; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card h3 { font-size: 1.1rem; margin-bottom: 12px; color: var(--primary); }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+        .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; }
+        .form-row { display: flex; gap: 10px; }
+
+        .checkbox-group, .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 6px; font-size: 0.85rem; }
+        .checkbox-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .checkbox-group label, .checkbox-grid label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-secondary { background: #64748b; color: #fff; }
+        .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+        .btn:hover { opacity: 0.9; }
+
+        .chart-container { position: relative; height: 260px; width: 100%; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .metric-box { background: #f8fafc; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; }
+        .metric-box .label { font-size: 0.75rem; color: #64748b; }
+        .metric-box .value { font-size: 1.05rem; font-weight: 700; color: var(--primary); }
+
+        .divider { border: none; border-top: 1px solid var(--border-color); margin: 15px 0; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .data-table th { background: #f8fafc; font-weight: 600; }
+        .table-responsive { overflow-x: auto; }
+
+        .fault-card-item { background: #fff5f5; border-left: 4px solid var(--danger); padding: 12px; border-radius: 4px; margin-bottom: 10px; }
+        .fault-card-item h4 { color: var(--danger); font-size: 0.95rem; margin-bottom: 4px; }
+        .text-muted { color: #64748b; font-size: 0.85rem; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 15px; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigasi -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>⚡ DIAGNOSIS MOTOR</h2>
+                <p>Simulator Edukasi Teknik Listrik</p>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-target="tab-dashboard">Dashboard & Simulasi</button>
+                <button class="nav-btn" data-target="tab-diagnosis">Diagnosis Pakar</button>
+                <button class="nav-btn" data-target="tab-history">Riwayat & Ekspor</button>
+                <button class="nav-btn" data-target="tab-testing">Pengujian Otomatis</button>
+            </nav>
+            <div class="disclaimer-badge">
+                <small>⚠️ Simulator Pendidikan. Bukan alat ukur tersertifikasi industri.</small>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Sistem Pakar Forward Chaining & Analisis Parameter</h1>
+                <div class="status-indicator">Status: <span id="sysStatus" class="badge normal">Normal</span></div>
+            </header>
+
+            <div class="content-body">
+                <!-- TAB 1: DASHBOARD & SIMULASI -->
+                <section id="tab-dashboard" class="tab-section active">
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Parameter Motor & Kontrol Simulasi</h3>
+                            <div class="form-group">
+                                <label>Kode / Nama Motor</label>
+                                <input type="text" id="motorCode" value="MOT-SIM-5.5KW" class="form-control">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Daya Nominal (kW)</label>
+                                    <input type="number" id="nomPower" value="5.5" class="form-control" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tegangan Nominal (V)</label>
+                                    <input type="number" id="nomVolt" value="380" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Arus Nominal (A)</label>
+                                    <input type="number" id="nomCurrent" value="11.0" class="form-control" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frekuensi (Hz) / Kutub (P)</label>
+                                    <div class="form-row">
+                                        <input type="number" id="freqHz" value="50" class="form-control">
+                                        <input type="number" id="poles" value="4" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr class="divider">
+                            <h4>Pengaturan Kondisi Operasi & Injeksi Gangguan</h4>
+                            <div class="form-group">
+                                <label>Kondisi Beban</label>
+                                <select id="loadCondition" class="form-control">
+                                    <option value="Normal">Normal (~100% Beban)</option>
+                                    <option value="Ringan">Ringan (&lt;50% Beban)</option>
+                                    <option value="Berat">Berat / Overload (&gt;115% Beban)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Injeksi Gangguan Simulasi</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="injPhaseLoss"> Kehilangan Fasa (Single Phasing)</label>
+                                    <label><input type="checkbox" id="injVUnb"> Ketidakseimbangan Tegangan (&gt;2%)</label>
+                                    <label><input type="checkbox" id="injBearing"> Kerusakan Bantalan (Bearing Fault)</label>
+                                    <label><input type="checkbox" id="injCooling"> Pendinginan Terganggu / Panas</label>
+                                    <label><input type="checkbox" id="injInsulation"> Penurunan Isolasi Belitan</label>
+                                    <label><input type="checkbox" id="injMisalignment"> Ketidakselarasan Poros (Misalignment)</label>
+                                </div>
+                            </div>
+                            <button id="btnRunSim" class="btn btn-primary">Terapkan & Perbarui Simulasi</button>
+                        </div>
+
+                        <div class="card">
+                            <h3>Grafik Real-Time Arus Tiga Fasa</h3>
+                            <div class="chart-container">
+                                <canvas id="currentChart"></canvas>
+                            </div>
+                            <div id="chartErrorMsg" class="text-danger mt-2" style="display:none; font-size:0.85rem;"></div>
+                            <div class="metrics-grid mt-3">
+                                <div class="metric-box">
+                                    <span class="label">Kecepatan Sinkron ($n_s$)</span>
+                                    <span id="valNs" class="value">1500 rpm</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="label">Slip ($s$)</span>
+                                    <span id="valSlip" class="value">4.00%</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="label">Ketidakseimbangan V</span>
+                                    <span id="valVUnb" class="value">0.50%</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="label">Suhu / Getaran</span>
+                                    <span id="valTempVib" class="value">65°C / 1.8 mm/s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: DIAGNOSIS PAKAR -->
+                <section id="tab-diagnosis" class="tab-section">
+                    <div class="card">
+                        <h3>Mesin Inferensi Forward Chaining (Aturan IF–THEN)</h3>
+                        <p class="text-muted">Sistem mengevaluasi fakta ukur dan gejala terpilih terhadap 8 kategori gangguan motor induksi standar.</p>
+                        
+                        <div class="form-group mt-3">
+                            <label><strong>Gejala Tambahan Pengamatan Lapangan:</strong></label>
+                            <div class="checkbox-grid">
+                                <label><input type="checkbox" class="sym-chk" value="S1"> Motor tidak dapat beroperasi / Trip</label>
+                                <label><input type="checkbox" class="sym-chk" value="S2"> Motor sulit starting / Lambat</label>
+                                <label><input type="checkbox" class="sym-chk" value="S3"> Arus tidak normal / Fluktuatif</label>
+                                <label><input type="checkbox" class="sym-chk" value="S4"> Tegangan suplai tidak seimbang</label>
+                                <label><input type="checkbox" class="sym-chk" value="S5"> Suhu bodi / belitan tinggi</label>
+                                <label><input type="checkbox" class="sym-chk" value="S6"> Suara bantalan kasar (Bearing noise)</label>
+                                <label><input type="checkbox" class="sym-chk" value="S7"> Getaran mekanis berlebihan</label>
+                                <label><input type="checkbox" class="sym-chk" value="S8"> Putaran/kecepatan drop berbeban</label>
+                                <label><input type="checkbox" class="sym-chk" value="S9"> Kipas/ventilasi rusak</label>
+                                <label><input type="checkbox" class="sym-chk" value="S11"> Hasil uji Megger isolasi rendah</label>
+                            </div>
+                        </div>
+
+                        <button id="btnRunDiagnosis" class="btn btn-success mt-3">Jalankan Analisis Forward Chaining</button>
+                    </div>
+
+                    <div id="diagnosisResultArea" class="card mt-3" style="display:none;">
+                        <h3>Hasil Diagnosis & Jejak Aturan</h3>
+                        <div id="diagnosisOutput"></div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: RIWAYAT & EKSPOR -->
+                <section id="tab-history" class="tab-section">
+                    <div class="card">
+                        <div class="flex-between">
+                            <h3>Riwayat Pemeriksaan (Browser LocalStorage)</h3>
+                            <div>
+                                <button id="btnClearHistory" class="btn btn-danger btn-sm">Hapus Riwayat</button>
+                                <button id="btnExportCSV" class="btn btn-secondary btn-sm">Ekspor ke CSV</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="data-table" id="historyTable">
+                               <thead>
+                                   <tr>
+                                       <th>Waktu</th>
+                                       <th>Kode Motor</th>
+                                       <th>Ringkasan Kondisi</th>
+                                       <th>Kemungkinan Gangguan</th>
+                                   </tr>
+                               </thead>
+                               <tbody id="historyBody">
+                                   <!-- Diisi oleh JS -->
+                               </tbody>
+                           </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: PENGUJIAN OTOMATIS -->
+                <section id="tab-testing" class="tab-section">
+                    <div class="card">
+                        <h3>Suite Pengujian Otomatis (Automated Test Runner)</h3>
+                        <p class="text-muted">Menjalankan skenario uji mandiri untuk memverifikasi validitas mesin inferensi, perhitungan slip, ketidakseimbangan, dan kasus data ambigu.</p>
+                        <button id="btnRunTests" class="btn btn-primary mt-2">Jalankan Semua Skenario Uji</button>
+                        
+                        <div class="table-responsive mt-3">
+                            <table class="data-table">
+                               <thead>
+                                   <tr>
+                                       <th>ID Uji</th>
+                                       <th>Nama Skenario</th>
+                                       <th>Ekspektasi Hasil</th>
+                                       <th>Status Aktual</th>
+                                   </tr>
+                               </thead>
+                               <tbody id="testResultsBody">
+                                   <tr><td colspan="4" class="text-center">Klik tombol di atas untuk memulai pengujian.</td></tr>
+                               </tbody>
+                           </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script Utama -->
+    <script>
+        let currentChart = null;
+        let currentSimulationState = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initNavigation();
+                runSimulation(); // Inisialisasi parameter simulasi awal & grafik
+                loadHistory();
+                
+                bindEvent('btnRunSim', 'click', runSimulation);
+                bindEvent('btnRunDiagnosis', 'click', runForwardChainingDiagnosis);
+                bindEvent('btnClearHistory', 'click', clearHistory);
+                bindEvent('btnExportCSV', 'click', exportCSV);
+                bindEvent('btnRunTests', 'click', runAutomatedTests);
+            } catch (err) {
+                console.error("Kesalahan Inisialisasi JavaScript:", err);
+            }
+        });
+
+        function bindEvent(elementId, eventType, handler) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.addEventListener(eventType, handler);
+            }
+        }
+
+        function initNavigation() {
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
+                    
+                    btn.classList.add('active');
+                    const targetId = btn.getAttribute('data-target');
+                    const targetSec = document.getElementById(targetId);
+                    if (targetSec) targetSec.classList.add('active');
+                });
+            });
+        }
+
+        function runSimulation() {
+            const codeInput = document.getElementById('motorCode');
+            const powerInput = document.getElementById('nomPower');
+            const voltInput = document.getElementById('nomVolt');
+            const currInput = document.getElementById('nomCurrent');
+            const freqInput = document.getElementById('freqHz');
+            const polesInput = document.getElementById('poles');
+            const loadSelect = document.getElementById('loadCondition');
+
+            const code = codeInput ? codeInput.value : 'MOT-SIM-5.5KW';
+            const powerKw = powerInput ? parseFloat(powerInput.value) || 5.5 : 5.5;
+            const voltNom = voltInput ? parseFloat(voltInput.value) || 380 : 380;
+            const currentNom = currInput ? parseFloat(currInput.value) || 11.0 : 11.0;
+            const freq = freqInput ? parseFloat(freqInput.value) || 50 : 50;
+            const poles = polesInput ? parseInt(polesInput.value) || 4 : 4;
+            const loadCondition = loadSelect ? loadSelect.value : 'Normal';
+
+            const injPhaseLoss = document.getElementById('injPhaseLoss') ? document.getElementById('injPhaseLoss').checked : false;
+            const injVUnb = document.getElementById('injVUnb') ? document.getElementById('injVUnb').checked : false;
+            const injBearing = document.getElementById('injBearing') ? document.getElementById('injBearing').checked : false;
+            const injCooling = document.getElementById('injCooling') ? document.getElementById('injCooling').checked : false;
+            const injInsulation = document.getElementById('injInsulation') ? document.getElementById('injInsulation').checked : false;
+            const injMisalignment = document.getElementById('injMisalignment') ? document.getElementById('injMisalignment').checked : false;
+
+            const ns = (120 * freq) / poles;
+            
+            let slip = 0.04;
+            if (loadCondition === 'Ringan') slip = 0.015;
+            if (loadCondition === 'Berat') slip = 0.075;
+            const nr = ns * (1 - slip);
+
+            let vL1 = voltNom / Math.sqrt(3);
+            let vL2 = voltNom / Math.sqrt(3);
+            let vL3 = voltNom / Math.sqrt(3);
+            let vUnbalance = 0.5;
+
+            if (injVUnb) {
+                vL1 *= 1.0;
+                vL2 *= 0.94;
+                vL3 *= 1.03;
+                vUnbalance = 3.8;
+            }
+
+            let iL1 = currentNom;
+            let iL2 = currentNom;
+            let iL3 = currentNom;
+
+            if (injPhaseLoss) {
+                iL1 = 0.0;
+                iL2 = currentNom * 1.8;
+                iL3 = currentNom * 1.8;
+            } else if (loadCondition === 'Berat') {
+                iL1 = currentNom * 1.25;
+                iL2 = currentNom * 1.27;
+                iL3 = currentNom * 1.26;
+            }
+
+            let temp = 65;
+            let vib = 1.8;
+            if (injCooling || loadCondition === 'Berat') { temp = 88; }
+            if (injBearing) { vib = 5.2; }
+            if (injMisalignment) { vib = 4.8; }
+
+            currentSimulationState = {
+                code, powerKw, voltNom, currentNom, freq, poles, ns, nr, slip: slip * 100,
+                vL1, vL2, vL3, vUnbalance, iL1, iL2, iL3, temp, vib, loadCondition,
+                injPhaseLoss, injVUnb, injBearing, injCooling, injInsulation, injMisalignment
+            };
+
+            setInnerText('valNs', `${ns.toFixed(0)} rpm`);
+            setInnerText('valSlip', `${(slip * 100).toFixed(2)}%`);
+            setInnerText('valVUnb', `${vUnbalance.toFixed(2)}%`);
+            setInnerText('valTempVib', `${temp}°C / ${vib} mm/s`);
+
+            const badge = document.getElementById('sysStatus');
+            if (badge) {
+                if (injPhaseLoss || injInsulation) {
+                    badge.className = 'badge danger';
+                    badge.innerText = 'Gangguan Kritis';
+                } else if (injVUnb || injBearing || injCooling || injMisalignment || loadCondition === 'Berat') {
+                    badge.className = 'badge warning';
+                    badge.innerText = 'Peringatan / Anomali';
+                } else {
+                    badge.className = 'badge normal';
+                    badge.innerText = 'Normal';
+                }
+            }
+
+            updateCurrentChart(iL1, iL2, iL3);
+        }
+
+        function setInnerText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        }
+
+        function updateCurrentChart(i1, i2, i3) {
+            const canvas = document.getElementById('currentChart');
+            const errorMsg = document.getElementById('chartErrorMsg');
+            
+            if (!canvas) return;
+
+            if (typeof Chart === 'undefined') {
+                if (errorMsg) {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = 'Gagal memuat pustaka Chart.js dari CDN.';
+                }
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            const timeLabels = ['0ms', '5ms', '10ms', '15ms', '20ms'];
+            
+            const dataL1 = timeLabels.map((_, i) => +(i1 * Math.sin((i * Math.PI) / 2)).toFixed(2));
+            const dataL2 = timeLabels.map((_, i) => +(i2 * Math.sin((i * Math.PI) / 2 - (2*Math.PI/3))).toFixed(2));
+            const dataL3 = timeLabels.map((_, i) => +(i3 * Math.sin((i * Math.PI) / 2 - (4*Math.PI/3))).toFixed(2));
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            try {
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [
+                            { label: 'Fasa L1 (A)', data: dataL1, borderColor: '#dc2626', tension: 0.4 },
+                            { label: 'Fasa L2 (A)', data: dataL2, borderColor: '#2563eb', tension: 0.4 },
+                            { label: 'Fasa L3 (A)', data: dataL3, borderColor: '#16a34a', tension: 0.4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: false } }
+                    }
+                });
+            } catch (e) {
+                console.error("Gagal merender grafik Chart.js:", e);
+            }
+        }
+
+        function evaluateInference(state, userSymptoms = []) {
+            const facts = {
+                phaseLoss: state.iL1 === 0 || state.iL2 === 0 || state.iL3 === 0 || state.injPhaseLoss,
+                voltageUnbalanceHigh: state.vUnbalance > 2.0 || state.injVUnb,
+                overload: state.iL1 > state.currentNom || state.loadCondition === 'Berat',
+                bearingNoise: state.vib > 4.5 || state.injBearing,
+                highTemp: state.temp > 80 || state.injCooling,
+                insulationLow: state.injInsulation || userSymptoms.includes('S11'),
+                highVibration: state.vib > 4.0,
+                rotorSlipHigh: state.slip > 7.0,
+                userSymptoms
+            };
+
+            const rules = [
+                {
+                    code: 'R1',
+                    faultId: 'F1',
+                    faultName: 'Kehilangan Salah Satu Fasa (Single Phasing)',
+                    condition: () => facts.phaseLoss || facts.userSymptoms.includes('S1'),
+                    evidence: 'Arus salah satu fasa bernilai 0 A atau terdeteksi pemutusan saluran fasa.'
+                },
+                {
+                    code: 'R2',
+                    faultId: 'F2',
+                    faultName: 'Ketidakseimbangan Tegangan Suplai',
+                    condition: () => facts.voltageUnbalanceHigh || facts.userSymptoms.includes('S4'),
+                    evidence: `Deviasi tegangan antar fasa tercatat ${state.vUnbalance.toFixed(2)}% (> 2.0% standar IEC).`
+                },
+                {
+                    code: 'R3',
+                    faultId: 'F3',
+                    faultName: 'Beban Lebih (Overload)',
+                    condition: () => facts.overload || facts.userSymptoms.includes('S3') || facts.userSymptoms.includes('S5'),
+                    evidence: `Arus operasi melebihi arus nominal (${state.currentNom} A) atau kondisi beban berat.`
+                },
+                {
+                    code: 'R4',
+                    faultId: 'F4',
+                    faultName: 'Gangguan Bantalan (Bearing Fault)',
+                    condition: () => (facts.bearingNoise && facts.highVibration) || facts.userSymptoms.includes('S6'),
+                    evidence: `Getaran tinggi (${state.vib} mm/s) dengan indikasi suara bantalan kasar.`
+                },
+                {
+                    code: 'R5',
+                    faultId: 'F5',
+                    faultName: 'Gangguan Pendinginan / Ventilasi Terhambat',
+                    condition: () => facts.highTemp || facts.userSymptoms.includes('S9'),
+                    evidence: `Suhu operasi tinggi (${state.temp}°C) dengan sistem pendinginan tidak optimal.`
+                },
+                {
+                    code: 'R6',
+                    faultId: 'F6',
+                    faultName: 'Gangguan Isolasi Belitan / Hubung Singkat',
+                    condition: () => facts.insulationLow || facts.userSymptoms.includes('S11'),
+                    evidence: 'Hasil uji tahanan isolasi (Megger) menunjukkan penurunan di bawah standar minimum.'
+                },
+                {
+                    code: 'R7',
+                    faultId: 'F7',
+                    faultName: 'Dugaan Gangguan Rotor (Broken Rotor Bar)',
+                    condition: () => facts.rotorSlipHigh || facts.userSymptoms.includes('S8'),
+                    evidence: `Slip rotor mencapai ${state.slip.toFixed(2)}% disertai penurunan putaran berbeban.`
+                },
+                {
+                    code: 'R8',
+                    faultId: 'F8',
+                    faultName: 'Ketidakselarasan Poros (Shaft Misalignment)',
+                    condition: () => (state.injMisalignment || facts.userSymptoms.includes('S7')) && !facts.bearingNoise,
+                    evidence: 'Getaran radial/aksial tinggi terdeteksi tanpa dominasi suara aus pada bearing.'
+                }
+            ];
+
+            let firedFaults = [];
+            rules.forEach(rule => {
+                try {
+                    if (rule.condition()) {
+                        firedFaults.push(rule);
+                    }
+                } catch (e) {
+                    console.error(`Error mengevaluasi aturan ${rule.code}:`, e);
+                }
+            });
+
+            return firedFaults;
+        }
+
+        function runForwardChainingDiagnosis() {
+            const checkboxes = document.querySelectorAll('.sym-chk:checked');
+            const userSymptoms = Array.from(checkboxes).map(cb => cb.value);
+            const firedFaults = evaluateInference(currentSimulationState, userSymptoms);
+
+            const resultArea = document.getElementById('diagnosisResultArea');
+            const outputDiv = document.getElementById('diagnosisOutput');
+            if (resultArea) resultArea.style.display = 'block';
+
+            if (firedFaults.length === 0) {
+                if (outputDiv) {
+                    outputDiv.innerHTML = `<p class="text-muted">Tidak ada aturan gangguan yang terpicu. Motor beroperasi dalam kondisi normal atau bukti/gejala belum mencukupi.</p>`;
+                }
+                saveHistory(currentSimulationState.code, "Normal / Aman", "Tidak ada gangguan terdeteksi.");
+                return;
+            }
+
+            let html = '';
+            firedFaults.forEach(f => {
+                html += `
+                    <div class="fault-card-item">
+                        <h4>⚠️ [${f.code}] ${f.faultName}</h4>
+                        <p><strong>Bukti Pendukung:</strong> ${f.evidence}</p>
+                        <p class="text-muted mt-2"><em>Rekomendasi: Lakukan pemeriksaan fisik lanjutan sesuai prosedur keselamatan K3 listrik.</em></p>
+                    </div>
+                `;
+            });
+
+            if (outputDiv) outputDiv.innerHTML = html;
+            saveHistory(currentSimulationState.code, "Terdeteksi Gangguan", firedFaults.map(f => f.faultName).join(', '));
+        }
+
+        function saveHistory(motorCode, summary, details) {
+            try {
+                let history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
+                const entry = {
+                    time: new Date().toLocaleString('id-ID'),
+                    motorCode,
+                    summary,
+                    details
+                };
+                history = [entry, ...history].slice(0, 50);
+                localStorage.setItem('motor_diag_history', JSON.stringify(history));
+                loadHistory();
+            } catch (e) {
+                console.error("Gagal menyimpan ke localStorage:", e);
+            }
+        }
+
+        function loadHistory() {
+            const tbody = document.getElementById('historyBody');
+            if (!tbody) return;
+
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
+            } catch (e) {
+                console.error("Gagal membaca localStorage:", e);
+            }
+
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Belum ada riwayat tersimpan (Data disimpan secara lokal di browser Anda).</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            history.forEach(item => {
+                html += `
+                    <tr>
+                        <td>${escapeHtml(item.time)}</td>
+                        <td><strong>${escapeHtml(item.motorCode)}</strong></td>
+                        <td>${escapeHtml(item.summary)}</td>
+                        <td>${escapeHtml(item.details)}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function clearHistory() {
+            if (confirm('Hapus seluruh riwayat pemeriksaan yang tersimpan di browser?')) {
+                try {
+                    localStorage.removeItem('motor_diag_history');
+                    loadHistory();
+                } catch (e) {
+                    console.error("Gagal menghapus localStorage:", e);
+                }
+            }
+        }
+
+        function exportCSV() {
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem('motor_diag_history')) || [];
+            } catch (e) {
+                alert('Gagal membaca data riwayat dari browser.');
+                return;
+            }
+
+            if (history.length === 0) {
+                alert('Tidak ada data riwayat untuk diekspor.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Waktu,Kode Motor,Ringkasan,Detail Gangguan\r\n";
+            history.forEach(row => {
+                const cleanTime = `"${(row.time || '').replace(/"/g, '""')}"`;
+                const cleanCode = `"${(row.motorCode || '').replace(/"/g, '""')}"`;
+                const cleanSummary = `"${(row.summary || '').replace(/"/g, '""')}"`;
+                const cleanDetails = `"${(row.details || '').replace(/"/g, '""')}"`;
+                csvContent += `${cleanTime},${cleanCode},${cleanSummary},${cleanDetails}\r\n`;
+            });
+
+            try {
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `riwayat_diagnosis_motor_${new Date().toISOString().slice(0,10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                console.error("Gagal mengunduh CSV:", e);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function runAutomatedTests() {
+            const testCases = [
+                {
+                    id: 'TC-01',
+                    name: 'Kondisi Normal',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultCount: 0
+                },
+                {
+                    id: 'TC-02',
+                    name: 'Kehilangan Fasa (Single Phasing)',
+                    state: { iL1: 0, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: true, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultId: 'F1'
+                },
+                {
+                    id: 'TC-03',
+                    name: 'Ketidakseimbangan Tegangan',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 3.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: true, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultId: 'F2'
+                },
+                {
+                    id: 'TC-04',
+                    name: 'Beban Lebih (Overload)',
+                    state: { iL1: 14, currentNom: 11, vUnbalance: 0.5, vib: 2.0, temp: 70, slip: 7, loadCondition: 'Berat', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultId: 'F3'
+                },
+                {
+                    id: 'TC-05',
+                    name: 'Gangguan Bantalan (Bearing)',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 5.2, temp: 68, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: true, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultId: 'F4'
+                },
+                {
+                    id: 'TC-06',
+                    name: 'Gangguan Pendinginan',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 85, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: true, injInsulation: false, injMisalignment: false },
+                    expectedFaultId: 'F5'
+                },
+                {
+                    id: 'TC-07',
+                    name: 'Gangguan Isolasi Belitan',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: true, injMisalignment: false },
+                    expectedFaultId: 'F6'
+                },
+                {
+                    id: 'TC-08',
+                    name: 'Ketidakselarasan Poros (Misalignment)',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 4.8, temp: 65, slip: 4, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: true },
+                    expectedFaultId: 'F8'
+                },
+                {
+                    id: 'TC-09',
+                    name: 'Bukti Tidak Mencukupi (Ambigu)',
+                    state: { iL1: 11, currentNom: 11, vUnbalance: 0.5, vib: 1.5, temp: 50, slip: 2, loadCondition: 'Normal', injPhaseLoss: false, injVUnb: false, injBearing: false, injCooling: false, injInsulation: false, injMisalignment: false },
+                    expectedFaultCount: 0
+                }
+            ];
+
+            const tbody = document.getElementById('testResultsBody');
+            if (!tbody) return;
+
+            let html = '';
+            testCases.forEach(tc => {
+                const fired = evaluateInference(tc.state);
+                
+                let passed = false;
+                let failReason = '';
+
+                if (tc.expectedFaultCount !== undefined) {
+                    if (fired.length === tc.expectedFaultCount) {
+                        passed = true;
+                    } else {
+                        failReason = `Diharapkan ${tc.expectedFaultCount} gangguan, mendeteksi ${fired.length}.`;
+                    }
+                } else if (tc.expectedFaultId) {
+                    const found = fired.some(f => f.faultId === tc.expectedFaultId);
+                    if (found) {
+                        passed = true;
+                    } else {
+                        failReason = `Gagal mendeteksi ID gangguan ${tc.expectedFaultId}.`;
+                    }
+                }
+
+                html += `
+                    <tr>
+                        <td>${tc.id}</td>
+                        <td>${tc.name}</td>
+                        <td>${tc.expectedFaultId ? 'Gangguan ' + tc.expectedFaultId : 'Normal / Tanpa Gangguan'}</td>
+                        <td>
+                            <span class="badge ${passed ? 'normal' : 'danger'}">
+                                ${passed ? 'BERHASIL (PASS)' : 'GAGAL (FAIL)'}
+                            </span>
+                            ${!passed ? `<br><small class="text-danger">${failReason}</small>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
